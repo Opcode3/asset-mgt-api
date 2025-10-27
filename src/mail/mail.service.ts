@@ -5,6 +5,8 @@ import { MailerService } from '@nestjs-modules/mailer';
 export class MailService {
   constructor(private readonly mailerService: MailerService) {}
 
+  baseUrl = 'https://dreamy-medovik-fc3c38.netlify.app/';
+
   async sendWelcomeEmail(to: string, name: string) {
     await this.mailerService.sendMail({
       to,
@@ -15,7 +17,7 @@ export class MailService {
   }
 
   async sendPasswordReset(to: string, token: string) {
-    const resetUrl = `https://golocal.com/reset-password?token=${token}`;
+    const resetUrl = `${this.baseUrl}/reset-password?token=${token}`;
     await this.mailerService.sendMail({
       to,
       subject: 'Password Reset Request',
@@ -25,7 +27,7 @@ export class MailService {
   }
 
   async sendVerificationEmail(to: string, token: string, password: string) {
-    const verifyUrl = `https://golocal.com/verify-email?token=${token}`;
+    const verifyUrl = `${this.baseUrl}/verify-email?token=${token}`;
     await this.mailerService.sendMail({
       to,
       subject: 'Your Asset Management Account Details',
