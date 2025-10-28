@@ -9,7 +9,10 @@ import { Model } from 'mongoose';
 import { Asset, AssetDocument } from './schemas/asset.schema';
 import { Assignment, AssignmentDocument } from './schemas/assignment.schema';
 import { CreateAssetDto } from './dto/create-asset.dto';
-import { CreateAssignmentDto } from './dto/create-assignment.dto';
+import {
+  CreateAssignmentDto,
+  ReturnAssignmentDto,
+} from './dto/create-assignment.dto';
 import { MailService } from 'src/mail/mail.service';
 
 @Injectable()
@@ -122,6 +125,104 @@ export class AssetsService {
     }
   }
 
+  // async returnAsset(
+  //   dto: ReturnAssignmentDto,
+  //   creatorId: string,
+  // ): Promise<AssignmentDocument> {
+  //   try {
+  //     // const assignment = await this.assignmentModel
+  //     //   .findById(dto.assignmentId)
+  //     //   .populate('assetId');
+
+  //     const assignment = await this.assignmentModel
+  //       .findById(dto.assignmentId)
+  //       .populate<{ assetId: AssetDocument }>('assetId')
+  //       .exec();
+
+  //     if (!assignment) throw new NotFoundException('Assignment not found');
+
+  //     const asset = assignment.assetId;
+  //     if (!asset) throw new NotFoundException('Associated asset not found');
+
+  //     // Update assignment status and returned comment
+  //     assignment.status = 'returned';
+  //     assignment.returnedComment = dto.returnedComment;
+  //     assignment.updatedAt = new Date(); // Update the timestamp
+  //     const savedAssignment = await assignment.save();
+
+  //     // Update asset status
+  //     asset.status = 'returned'; // Assuming `returned` is a valid status in your asset model
+  //     await asset.save();
+
+  //     return savedAssignment;
+  //   } catch (error) {
+  //     console.error('Error returning asset', error);
+  //     if (error instanceof NotFoundException) throw error;
+  //     throw new InternalServerErrorException(
+  //       'Failed to return asset. Please try again later.',
+  //     );
+  //   }
+  // }
+
+  async returnAsset(
+    dto: ReturnAssignmentDto,
+    creatorId: string,
+  ): Promise<AssignmentDocument> {
+    try {
+      // 1️⃣ Get the assignment first
+      const assignment = await this.assignmentModel.findById(dto.assignmentId);
+      if (!assignment) throw new NotFoundException('Assignment not found');
+
+      // 2️⃣ Get the related asset using the assetId
+      const asset = await this.assetModel.findById(assignment.assetId);
+      if (!asset) throw new NotFoundException('Associated asset not found');
+
+      // 3️⃣ Update the assignment details
+      assignment.status = 'returned';
+      assignment.returnedComment = dto.returnedComment;
+      assignment.collectedBy = creatorId;
+      // assignment.updatedAt = new Date();
+      const savedAssignment = await assignment.save();
+
+      // 4️⃣ Update the asset status
+      asset.status = dto.assetStatus || 'available'; // use provided status or fallback
+      await asset.save();
+
+      // 5️⃣ Return the updated assignment
+      return savedAssignment;
+    } catch (error) {
+      console.error('Error returning asset', error);
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException(
+        'Failed to return asset. Please try again later.',
+      );
+    }
+  }
+
+  async signedAssignmentAsset(
+    assignmentId: string,
+  ): Promise<AssignmentDocument> {
+    try {
+      // 1️⃣ Get the assignment first
+      const assignment = await this.assignmentModel.findById(assignmentId);
+      if (!assignment) throw new NotFoundException('Assignment not found');
+
+      assignment.signed = true;
+      const savedAssignment = await assignment.save();
+
+      // 5️⃣ Return the updated assignment
+      return savedAssignment;
+
+    } catch (error) {
+      
+      console.error('Error returning asset', error);
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException(
+        'Failed to return asset. Please try again later.',
+      );
+    }
+  }
+
   async getAllAssets() {
     return await this.assetModel
       .find()
@@ -220,7 +321,8 @@ export class AssetsService {
   async getAllAssignments() {
     try {
       const assignments = await this.assignmentModel
-        .find()
+        // .find()
+        .find({ status: { $ne: 'returned' } })
         .populate({
           path: 'assetId',
           model: 'Asset',
@@ -240,6 +342,7 @@ export class AssetsService {
       return assignments.map((assignment) => {
         const asset = assignment.assetId as any;
         const assignedBy = assignment.assignedBy as any;
+        const collectedBy = assignment.collectedBy as any;
 
         return {
           id: String(assignment._id),
@@ -260,6 +363,14 @@ export class AssetsService {
                 role: assignedBy.role,
               }
             : null,
+          collectedBy: collectedBy
+            ? {
+                id: collectedBy._id?.toString(),
+                name: collectedBy.name,
+                email: collectedBy.email,
+                role: collectedBy.role,
+              }
+            : null,
           asset: asset
             ? {
                 id: asset._id?.toString(),
@@ -277,6 +388,78 @@ export class AssetsService {
     } catch (error) {
       console.error('❌ Error fetching all assignments:', error);
       throw new Error('Unable to fetch all assignments');
+    }
+  }
+
+  async getReturnedAssignments() {
+    try {
+      const assignments = await this.assignmentModel
+        .find({ status: 'returned' }) // 👈 filter for returned only
+        .populate({
+          path: 'assetId',
+          model: 'Asset',
+          select:
+            'assetNo serialNo assetType imageUrls description location status',
+        })
+        .populate({
+          path: 'assignedBy',
+          model: 'User',
+          select: 'name email role',
+        })
+        .sort({ createdAt: -1 })
+        .exec();
+
+      if (!assignments.length) return [];
+
+      return assignments.map((assignment) => {
+        const asset = assignment.assetId as any;
+        const assignedBy = assignment.assignedBy as any;
+        const collectedBy = assignment.collectedBy as any;
+
+        return {
+          id: String(assignment._id),
+          status: assignment.status,
+          comment: assignment.comment ?? '',
+          returnedComment: assignment.returnedComment ?? '',
+          createdAt: assignment.createdAt,
+          updatedAt: assignment.updatedAt,
+          assignedTo: {
+            name: assignment.assignedToName,
+            email: assignment.assignedToEmail,
+          },
+          assignedBy: assignedBy
+            ? {
+                id: assignedBy._id?.toString(),
+                name: assignedBy.name,
+                email: assignedBy.email,
+                role: assignedBy.role,
+              }
+            : null,
+          collectedBy: collectedBy
+            ? {
+                id: collectedBy._id?.toString(),
+                name: collectedBy.name,
+                email: collectedBy.email,
+                role: collectedBy.role,
+              }
+            : null,
+          asset: asset
+            ? {
+                id: asset._id?.toString(),
+                assetNo: asset.assetNo,
+                serialNo: asset.serialNo,
+                assetType: asset.assetType,
+                imageUrls: asset.imageUrls ?? [],
+                description: asset.description,
+                location: asset.location,
+                status: asset.status,
+              }
+            : null,
+        };
+      });
+    } catch (error) {
+      console.error('❌ Error fetching returned assignments:', error);
+      throw new Error('Unable to fetch returned assignments');
     }
   }
 }

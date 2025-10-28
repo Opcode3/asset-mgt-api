@@ -7,16 +7,22 @@ import {
   UploadedFiles,
   Get,
   Req,
+  Query,
 } from '@nestjs/common';
 import { AssetsService } from './assets.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
-import { CreateAssignmentDto } from './dto/create-assignment.dto';
+import {
+  CreateAssignmentDto,
+  ReturnAssignmentDto,
+} from './dto/create-assignment.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { storage } from '../../common/helpers/cloudinary.helper';
 import type { Request } from 'express';
+import { ResponseDto } from 'src/common/dto/response.dto';
+import { AssignmentDocument } from './schemas/assignment.schema';
 
 @Controller('assets')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -49,6 +55,16 @@ export class AssetsController {
     return await this.assetsService.assignAsset(dto, creatorId);
   }
 
+  @Post('return')
+  @Roles('admin', 'assignee')
+  async returnAsset(
+    @Body() dto: ReturnAssignmentDto, // DTO to receive assignmentId, returnedComment, and asset status
+    @Req() req: Request,
+  ) {
+    const creatorId = (req.user as any).sub;
+    return await this.assetsService.returnAsset(dto, creatorId);
+  }
+
   // ✅ Get all assets (admin & assignee)
   @Get()
   @Roles('admin', 'assignee')
@@ -63,11 +79,29 @@ export class AssetsController {
     return await this.assetsService.getAllAssignments();
   }
 
+  @Get('returned')
+  @Roles('admin', 'assignee')
+  async getAllReturnedAssets() {
+    return await this.assetsService.getReturnedAssignments();
+  }
+
   // ✅ Get assigned assets for logged-in user
   @Get('assigned')
   @Roles('admin', 'assignee')
   async getAssignedAssets(@Req() req) {
     const userId = req.user?.id; // comes from JWT payload
     return await this.assetsService.getAssignedAssets(userId);
+  }
+
+  @Get('sign-agreement')
+  async signedAgreement(
+    @Query('id') id: string,
+  ): Promise<ResponseDto<AssignmentDocument>> {
+    const assignment = await this.assetsService.signedAssignmentAsset(id);
+    return new ResponseDto(
+      true,
+      'The Agreement is signed successfully',
+      assignment,
+    );
   }
 }

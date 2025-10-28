@@ -30,6 +30,12 @@ export class Assignment {
   })
   status: string;
 
+  @Prop({ default: false })
+  signed?: boolean;
+
+  @Prop({ type: Types.ObjectId, ref: 'User' })
+  collectedBy?: string;
+
   // 👇 Add these for TypeScript awareness
   @Prop()
   createdAt?: Date;

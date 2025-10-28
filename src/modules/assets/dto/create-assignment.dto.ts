@@ -23,3 +23,15 @@ export class CreateAssignmentDto {
   @IsString()
   returnedComment?: string;
 }
+
+export class ReturnAssignmentDto {
+  @IsString()
+  @IsNotEmpty()
+  assignmentId: string;
+
+  @IsString()
+  returnedComment: string;
+
+  @IsString()
+  assetStatus: string; // This will be used to update the asset's status
+}

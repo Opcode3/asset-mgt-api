@@ -77,9 +77,9 @@ export class MailService {
       serialNo: string;
       location: string;
       description?: string;
-    }
+    },
   ) {
-    const agreementLink = `${this.baseUrl}/asset-agreement?asset=${encodeURIComponent(assignedId)}`;
+    const agreementLink = `${this.baseUrl}/asset-agreement?id=${encodeURIComponent(assignedId)}`;
     await this.mailerService.sendMail({
       to,
       subject: 'Asset Assignment Notification',
