@@ -31,8 +31,8 @@ export class AssetsController {
     @Body() dto: CreateAssetDto,
     @Req() req: Request,
   ) {
-    console.log('Images:', images);
-    console.log('DTO:', dto);
+    // console.log('Images:', images);
+    // console.log('DTO:', dto);
 
     const creatorId = (req.user as any).sub;
     const imageUrls = images?.map((file) => file.path) || []; // Cloudinary returns file.path as the image URL
@@ -43,9 +43,10 @@ export class AssetsController {
   }
 
   @Post('assign')
-  @Roles('admin')
-  async assignAsset(@Body() dto: CreateAssignmentDto) {
-    return await this.assetsService.assignAsset(dto);
+  @Roles('admin', 'assignee')
+  async assignAsset(@Body() dto: CreateAssignmentDto, @Req() req: Request) {
+    const creatorId = (req.user as any).sub;
+    return await this.assetsService.assignAsset(dto, creatorId);
   }
 
   // ✅ Get all assets (admin & assignee)

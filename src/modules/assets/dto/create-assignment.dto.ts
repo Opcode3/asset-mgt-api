@@ -7,7 +7,11 @@ export class CreateAssignmentDto {
 
   @IsString()
   @IsNotEmpty()
-  assignedTo: string;
+  assignedToEmail: string;
+
+  @IsString()
+  @IsNotEmpty()
+  assignedToName: string;
 
   @IsString()
   @IsNotEmpty()
@@ -15,4 +19,7 @@ export class CreateAssignmentDto {
 
   @IsString()
   comment?: string;
+
+  @IsString()
+  returnedComment?: string;
 }

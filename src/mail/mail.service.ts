@@ -68,6 +68,75 @@ export class MailService {
     });
   }
 
+  async sendAssetAssignmentEmail(
+    to: string,
+    assigneeName: string,
+    assignedId: string,
+    assetDetails: {
+      assetType: string;
+      serialNo: string;
+      location: string;
+      description?: string;
+    }
+  ) {
+    const agreementLink = `${this.baseUrl}/asset-agreement?asset=${encodeURIComponent(assignedId)}`;
+    await this.mailerService.sendMail({
+      to,
+      subject: 'Asset Assignment Notification',
+      html: `
+      <div style="font-family: Arial, sans-serif; color: #333;">
+        <h2 style="color: #007bff;">Asset Assignment Notification</h2>
+
+        <p>Dear <strong>${assigneeName}</strong>,</p>
+
+        <p>
+          You have been assigned a new asset under the company's asset management system.
+        </p>
+
+        <h3>Asset Details:</h3>
+        <ul style="list-style:none; padding-left:0; line-height: 1.6;">
+          <li><strong>Asset Type:</strong> ${assetDetails.assetType}</li>
+          <li><strong>Serial Number:</strong> ${assetDetails.serialNo}</li>
+          <li><strong>Location:</strong> ${assetDetails.location}</li>
+          ${
+            assetDetails.description
+              ? `<li><strong>Description:</strong> ${assetDetails.description}</li>`
+              : ''
+          }
+        </ul>
+
+        <p>
+          Before you can officially take possession of this asset,
+          please review and agree to the terms and conditions.
+        </p>
+
+        <p style="margin: 20px 0;">
+          <a href="${agreementLink}"
+             style="background-color: #28a745; color: #fff; padding: 10px 20px;
+             text-decoration: none; border-radius: 5px;">
+             Review & Accept Terms
+          </a>
+        </p>
+
+        <p>
+          If the button above doesn’t work, copy and paste this link into your browser:
+        </p>
+        <p style="word-break: break-all; color: #0066cc;">
+          <a href="${agreementLink}">${agreementLink}</a>
+        </p>
+
+        <p>
+          Kindly complete the agreement process within 48 hours of receiving this message.
+        </p>
+
+        <br/>
+        <p>Best regards,</p>
+        <p><strong>The Asset Management Team</strong></p>
+      </div>
+    `,
+    });
+  }
+
   // async sendVerificationEmail(to: string, token: string) {
   // const verifyUrl = `https://myapp.com/verify-email?token=${token}`;
   // await this.mailerService.sendMail({
