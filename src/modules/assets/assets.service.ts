@@ -36,6 +36,40 @@ export class AssetsService {
     }
   }
 
+  async updateAssetStatus(assetId: string, status: string): Promise<Asset> {
+    try {
+      const asset = await this.assetModel.findById(assetId);
+      if (!asset) {
+        throw new NotFoundException('Asset not found');
+      }
+
+      asset.status = status;
+
+      return await asset.save();
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async deleteAsset(assetId: string): Promise<{ message: string }> {
+    const asset = await this.assetModel.findById(assetId);
+
+    if (!asset) {
+      throw new NotFoundException('Asset not found');
+    }
+
+    // Optional: soft delete instead of hard delete
+    // asset.deletedBy = deleterId;
+    asset.deletedAt = new Date();
+    asset.isDeleted = true;
+    await asset.save();
+
+    // Hard delete (removes from DB)
+    // await this.assetModel.findByIdAndDelete(assetId);
+
+    return { message: `Asset ${assetId} deleted successfully` };
+  }
+
   // async assignAsset(
   //   dto: CreateAssignmentDto,
   //   creatorId: string,
@@ -212,9 +246,7 @@ export class AssetsService {
 
       // 5️⃣ Return the updated assignment
       return savedAssignment;
-
     } catch (error) {
-      
       console.error('Error returning asset', error);
       if (error instanceof NotFoundException) throw error;
       throw new InternalServerErrorException(
@@ -223,13 +255,43 @@ export class AssetsService {
     }
   }
 
+  // async getAllAssets() {
+  //   return await this.assetModel
+  //     .find({ status: { $ne: 'assigned' } })
+  //     .populate('createdBy', 'name email')
+  //     .exec();
+  // }
+
   async getAllAssets() {
     return await this.assetModel
-      .find()
+      .find({
+        $and: [
+          { status: { $ne: 'assigned' } },
+          {
+            $or: [
+              { isDeleted: false },
+              { isDeleted: { $exists: false } },
+              { isDeleted: null }, // 👈 extra safety for null values
+            ],
+          },
+        ],
+      })
       .populate('createdBy', 'name email')
       .exec();
   }
 
+  async getAssetById(id: string) {
+    const asset = await this.assetModel
+      .findById(id)
+      .populate('createdBy', 'name email')
+      .exec();
+
+    if (!asset) {
+      throw new NotFoundException(`Asset with ID ${id} not found`);
+    }
+
+    return asset;
+  }
   async getAssignedAssets(userId: string) {
     try {
       const assignments = await this.assignmentModel

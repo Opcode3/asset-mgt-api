@@ -29,6 +29,15 @@ export class Asset {
   })
   status: string;
 
+  @Prop({ default: false })
+  isDeleted: boolean;
+
+  @Prop()
+  deletedAt?: Date;
+
+  // @Prop()
+  // deletedBy?: string;
+
   @Prop({ type: Types.ObjectId, ref: 'User', required: false })
   createdBy?: string;
 }

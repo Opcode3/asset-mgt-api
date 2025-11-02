@@ -8,6 +8,9 @@ import {
   Get,
   Req,
   Query,
+  Param,
+  Patch,
+  Delete,
 } from '@nestjs/common';
 import { AssetsService } from './assets.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
@@ -46,6 +49,21 @@ export class AssetsController {
       { ...dto, imageUrls },
       creatorId,
     );
+  }
+
+  @Patch(':id/status')
+  @Roles('admin', 'assignee') // Restrict who can edit
+  async updateAssetStatus(
+    @Param('id') assetId: string,
+    @Body('status') status: string,
+  ) {
+    return await this.assetsService.updateAssetStatus(assetId, status);
+  }
+
+  @Delete(':id')
+  @Roles('admin') // Typically only admins can delete
+  async deleteAsset(@Param('id') assetId: string) {
+    return await this.assetsService.deleteAsset(assetId);
   }
 
   @Post('assign')
@@ -93,15 +111,21 @@ export class AssetsController {
     return await this.assetsService.getAssignedAssets(userId);
   }
 
-  @Get('sign-agreement')
-  async signedAgreement(
-    @Query('id') id: string,
-  ): Promise<ResponseDto<AssignmentDocument>> {
-    const assignment = await this.assetsService.signedAssignmentAsset(id);
-    return new ResponseDto(
-      true,
-      'The Agreement is signed successfully',
-      assignment,
-    );
-  }
+  // //  How to make this an unauthenticated route?
+  // @Get(':id')
+  // async getAssetById(@Param('id') id: string) {
+  //   return await this.assetsService.getAssetById(id);
+  // }
+
+  // @Get('sign-agreement')
+  // async signedAgreement(
+  //   @Query('id') id: string,
+  // ): Promise<ResponseDto<AssignmentDocument>> {
+  //   const assignment = await this.assetsService.signedAssignmentAsset(id);
+  //   return new ResponseDto(
+  //     true,
+  //     'The Agreement is signed successfully',
+  //     assignment,
+  //   );
+  // }
 }

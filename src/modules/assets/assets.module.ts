@@ -5,6 +5,7 @@ import { Assignment, AssignmentSchema } from './schemas/assignment.schema';
 import { AssetsService } from './assets.service';
 import { AssetsController } from './assets.controller';
 import { MailModule } from 'src/mail/mail.module';
+import { PublicAssetsController } from './publicassets.controller';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { MailModule } from 'src/mail/mail.module';
     ]),
     MailModule, // 👈 register MailModule so UsersService can use MailService
   ],
-  controllers: [AssetsController],
+  controllers: [AssetsController, PublicAssetsController],
   providers: [AssetsService],
 })
 export class AssetsModule {}
